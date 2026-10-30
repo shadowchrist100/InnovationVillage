@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// role: STARTUP | INVESTOR | ADMIN
+// status: PENDING | APPROVED | REJECTED
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  role         String
+  status       String    @default("APPROVED")
+  createdAt    DateTime  @default(now())
+  startup      Startup?
+  investor     Investor?
+}
+
+model Startup {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  logo        String    @default("") // nom du fichier dans data/uploads
+  sector      String
+  country     String
+  website     String
+  demoVideoUrl String
+  team        String // JSON: [{ name, role, photo? }] (photo = nom de fichier)
+  whatTheyDo  String
+  origin      String // d'où est venue l'idée
+  goal        String // objectif
+  problem     String // problème résolu
+  createdAt   DateTime  @default(now())
+  bookings    Booking[]
+}
+
+model Investor {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName     String
+  organization String
+  position     String
+  country      String // d'où il vient
+  city         String
+  bio          String // présentation
+  sectors      String // séparés par des virgules
+  website      String
+  createdAt    DateTime  @default(now())
+  bookings     Booking[]
+}
+
+// status: PENDING (en attente de réponse) | CONFIRMED | DECLINED | CANCELLED
+// proposedBy: INVESTOR | STARTUP : qui a fait la dernière proposition d'horaire (l'autre partie doit répondre)
+// activeStart : égal à startsAt tant que la demande est PENDING ou CONFIRMED, sinon null.
+//   Les contraintes d'unicité portent dessus : un créneau est tenu par une demande en cours,
+//   et il est libéré dès que la demande est refusée ou annulée (NULL n'entre pas en conflit).
+model Booking {
+  id          String    @id @default(cuid())
+  investorId  String
+  investor    Investor  @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  startupId   String
+  startup     Startup   @relation(fields: [startupId], references: [id], onDelete: Cascade)
+  startsAt    DateTime
+  status      String    @default("PENDING")
+  proposedBy  String    @default("INVESTOR")
+  activeStart DateTime?
+  closedBy    String? // INVESTOR | STARTUP | ADMIN : qui a refusé ou annulé
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+
+  @@unique([investorId, activeStart])
+  @@unique([startupId, activeStart])
+}

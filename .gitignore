@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.env
+.env.local
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+
+# base de données locale et fichiers téléversés
+prisma/*.db
+prisma/*.db-journal
+data/uploads/
+data/outbox/
